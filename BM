@@ -1,0 +1,147 @@
+% Author: Bianca Mariani
+% Email: bmariani@student.unimelb.edu.au
+% Student Number: 1461525
+% Date: 28.03.2024
+% File: Assignment1_Q2_BM.m
+%
+clear workspace
+clear all
+close all
+clc
+%
+% Fixed Parameters from Table
+g = 9.8; %[m/s^2], Acceleration due to gravity on Earth
+a = 15/100; %[m], Distance OA
+b = 45/100; %[m], Distance OB
+u = 20/100; %[m], Upper arm muscle attachment distance
+d = 3/100;  %[m], Forearm muscle attachment distance
+m_arm = 3.5; %[kg], Arm mass
+
+% Prompt user to inputs values
+theta_0_deg = input('Enter the angle characterizing the range of motion [degrees]\n');
+
+% Using error coding to limit theta value between 0 and 70 degrees
+while theta_0_deg < 0 || theta_0_deg > 71;
+    theta_0_deg = input('That value is invalid. Please input another angle characterising the range of motion in degrees.\n'); % Re-requests user input for n
+end
+
+n_rep = input('Enter the number of repetitions per minute\n');
+m_weight = input('Enter the mass of weight carried [kg]\n');
+
+% Outputs for t, T, angular frequency
+t = linspace(0,30,500); % time from 0 to 30 seconds
+T = 60/n_rep; % Calculate the total time for one rep T
+angular_frequency = (2*pi)/T;
+theta_0_rad = deg2rad(theta_0_deg);
+theta = theta_0_rad.*cos(angular_frequency.*t); % [radians] value for Angular displacement
+omega = -theta_0_rad.*angular_frequency.*sin(angular_frequency.*t); % [radians/s] Calculating Angular Velocity
+alpha = -theta_0_rad.*angular_frequency^2.*cos(angular_frequency.*t); % [radians/s^2] Calculating Angular Acceleration
+
+% Equations for I_O and r_COM
+I_O = 0.08875+0.2065*m_weight; % mass moment of inertia of the system about point O
+r_COM = (0.525+0.45*m_weight)/(3.5+m_weight); % location of the centre of mass of the system
+
+% Expression for F_muscle from assignment document
+numerator_F_muscle = sqrt(u^2+d^2-(2*u*d).*sin(theta));
+denominator_F_muscle = (u*d).*cos(theta);
+term1_F_muscle = (I_O.*alpha)+(a*m_arm+b*m_weight).*(g.*cos(theta));
+F_muscle = (numerator_F_muscle./denominator_F_muscle).*term1_F_muscle;
+
+% Expression for R_par from assignment document
+numerator_R_par = F_muscle.*(d-u.*sin(theta));
+denominator_R_par = sqrt(u^2+d^2-(2*u*d).*sin(theta));
+term2_R_par = (m_arm+m_weight).*(g.*sin(theta)-omega.^2.*r_COM);
+R_par = (numerator_R_par./denominator_R_par)+term2_R_par;
+
+% Expression for R_perp from assignment document
+term3_R_perp = (m_arm+m_weight).*(g.*cos(theta)+alpha.*r_COM);
+numerator_R_perp = F_muscle.*(u.*cos(theta));
+denominator_R_perp = sqrt(u^2+d^2-(2*u*d).*sin(theta));
+R_perp = term3_R_perp-(numerator_R_perp./denominator_R_perp);
+
+% Convert back to degrees
+theta_degrees = rad2deg(theta); % convert theta value back to degrees for graphing
+
+% Forearm Calculations
+forearm_x = b.*cos(theta); % x-coordinates of forearm tip
+forearm_y = b.*sin(theta); % y-coordinates of forearm tip
+
+% Calculate the position of the bicep attachment point
+bicep_x = d.*cos(theta); % x-coordinates of bicep tip
+bicep_y = d.*sin(theta); % y-coordinates of bicep tip
+
+% Initializing figures 1-4 and subplots
+figure(1); % opens figure window 1
+% Figure 1: An animated plot of θ [degrees] vs. t [s]
+subplot(4, 2, 2);
+title('\theta [degrees] vs. t [s]');
+xlabel('Time (s)');
+ylabel('\theta (degrees)');
+xlim([0,30]); % x limit
+ylim([min(theta_degrees), max(theta_degrees)]);
+theta_line = animatedline('Color', 'b');
+
+% Figure 2: An animated plot of Rpar [N] vs. t [s]
+subplot(4, 2, 4);
+title('R_{par} [N] vs. t [s]');
+xlabel('Time (s)');
+ylabel('R_{par} (N)');
+xlim([0,30]); % x limit
+ylim([min(R_par), max(R_par)]); % y-limit
+R_par_line = animatedline('Color', 'r');
+
+% Figure 3: An animated plot of Rperp [N] vs. t [s]
+subplot(4, 2, 6);
+title('R_{perp} [N] vs. t [s]');
+xlabel('Time (s)');
+ylabel('R_{perp} (N)');
+xlim([0,30]); % x limit
+ylim([min(R_perp), max(R_perp)]); % y-limit
+R_perp_line = animatedline('Color', '#77AC30');
+
+% Figure 4: An animated plot of Fmuscle [N] vs. t [s]
+subplot(4, 2, 8);
+title('F_{muscle} [N] vs. t [s]');
+xlabel('Time (s)');
+ylabel('F_{muscle} (N)');
+xlim([0,30]); % x limit
+ylim([min(F_muscle), max(F_muscle)]); % y-limit
+F_muscle_line = animatedline('Color', 'm');
+
+% Plot of Animation of Forearm
+subplot(4,2,[1 3 5 7]);
+title('Bicep Curl Animation');
+axis equal
+axis([0,b,-b,b])
+forearm = animatedline('Color','k','LineWidth',5); % Colour using HTML Colour Codes
+weight = animatedline('Marker','o','MarkerSize',20,'MarkerFaceColor','b');
+
+% Plot of Animation of bicep contracting and extending
+hold on
+subplot(4,2,[1 3 5 7]);
+bicep = animatedline('Color','r','LineWidth',2); % Colour using HTML Colour Codes
+
+% Animation Loop (add points to each plot one at a time).
+for i = 1:length(t)
+    % Animation of Bicep Curl
+    % Add points to Forearm animation
+    clearpoints(forearm);
+    addpoints(forearm, [0, forearm_x(i)], [0, forearm_y(i)]);
+
+    % Add points to Circle (weight) animation
+    clearpoints(weight);
+    addpoints(weight, forearm_x(i), forearm_y(i));
+
+    % Add points to bicep animation
+   clearpoints(bicep);
+   addpoints(bicep,[0,bicep_x(i)],[u,bicep_y(i)]);
+
+    % Add points to other animated plots
+    addpoints(theta_line, t(i), theta_degrees(i));
+    addpoints(R_par_line, t(i), R_par(i));
+    addpoints(R_perp_line, t(i), R_perp(i));
+    addpoints(F_muscle_line, t(i), F_muscle(i));
+
+    drawnow
+end
+
